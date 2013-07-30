@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<h1> {{Message}} </h1>
+	
+	{% for store in stores %}
+		{% include '_Stores.html' %}
+	
+	{% endfor %}
+	
+
+
+{% endblock %}
