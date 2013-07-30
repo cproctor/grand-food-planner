@@ -7,7 +7,7 @@ class FoodPlanner(object):
     def __init__(self, csvFileName, fieldNames, skipRows=0):
         with open(csvFileName) as csvFile:
             reader = csv.DictReader(csvFile, fieldNames)
-            for badRow in range(skipRows):
+            for badRow in range(skipRows or 0):
                 reader.read()
             self.data = [row for row in reader]
         self.data = self.clean_data(self.data)
@@ -27,6 +27,10 @@ class FoodPlanner(object):
             for location in storageLocations:
                 if datum.get(location, False):
                     datum['storage'] = location
+
+        print "* TODO Validate that ingredients are stored in the same place and purchased in the same place"
+        print "* TODO Validate that ingredients have compatible units, or that we know how to convert"
+        print "* TODO Strip out empty rows"
         return dirtyData
 
     def test(self):
@@ -52,6 +56,7 @@ if __name__ == '__main__':
         python planner.py ingredients.test.csv'''
     )
     parser.add_argument('csvfile', help='The csv file containing menu information.')
+    parser.add_argument('--skip_rows', '-s', help="Number of header rows to skip in the csv file")
     args = parser.parse_args()
 
     fieldNames = [
@@ -75,7 +80,7 @@ if __name__ == '__main__':
         'purchased',
         'notes'
     ]
-    planner = FoodPlanner(args.csvfile, fieldNames)
+    planner = FoodPlanner(args.csvfile, fieldNames, skipRows=args.skip_rows)
     planner.ingredients()
 
     
