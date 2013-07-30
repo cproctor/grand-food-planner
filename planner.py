@@ -1,4 +1,5 @@
 import csv
+import re
 
 class FoodPlanner(object):
 
@@ -9,7 +10,6 @@ class FoodPlanner(object):
                 reader.read()
             self.data = [row for row in reader]
         self.data = self.clean_data(self.data)
-        print self.data
 
     def clean_data(self, dirtyData):
         storageLocations = [
@@ -27,6 +27,20 @@ class FoodPlanner(object):
                 if datum.get(location, False):
                     datum['storage'] = location
         return dirtyData
+
+    def test(self):
+        def isCarrot(entry):
+            return re.search('carrot', entry.get('item')) 
+        entriesWithCarrots = filter(isCarrot, self.data)
+        print "There are %s entries with carrots!" % len(entriesWithCarrots)
+        for entry in entriesWithCarrots:
+            print "We are using %(quantity)s carrots on day %(day)s for meal %(meal)s." % entry
+
+    def ingredients(self):
+        ingredients = set([e.get('item') for e in self.data])
+        print "We are using the following ingredients on our trip"
+        for i in sorted(ingredients):
+            print "  * %s" % i
         
 
 if __name__ == '__main__':
@@ -61,5 +75,6 @@ if __name__ == '__main__':
         'notes'
     ]
     planner = FoodPlanner(args.csvfile, fieldNames)
+    planner.ingredients()
 
     
