@@ -39,7 +39,7 @@ class FoodPlanner(object):
     def ingredients(self):
         ingredients = set([e.get('item') for e in self.data])
         print "We are using the following ingredients on our trip"
-        for i in sorted(ingredients):
+        for i in sorted(ingredients, key=str.lower):
             print "  * %s" % i
         
 
