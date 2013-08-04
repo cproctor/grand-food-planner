@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}	
+<h1>Master List of Stores Where We Will Buy Ingredients</h1>
+
+<table>
+{% for ingredient, store in ingredients.iteritems() %}
+    <tr>   
+        <td>{{ingredient}}</td>
+        <td>{{store}}</td>
+    </tr>
+{% endfor %}
+</table>
+
+{% endblock %}

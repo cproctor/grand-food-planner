@@ -19,3 +19,7 @@ Optimizations:
 It is possible to setup the planner.py file without saying "python planner.py"
 Hey planner.py, if I forget to give you a file find the csv file in the folder. You can do it! I believe in you!
 Come up with conversions for various ways of  
+
+For Chris
+Make the pick list
+Make the shopping list

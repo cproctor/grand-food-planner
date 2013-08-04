@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>All Ingredients, by storage location</h1>
+<h3>Grand Canyon 2012</h3>
+
+{% for eachLocation, ingredients in storageLocations.iteritems() %}
+    <h2>{{eachLocation}}</h2>
+    <table>
+    {% for eachIngredient in ingredients %}
+        <tr>
+            <td>{{ eachIngredient.quantity }}</td> 
+            <td>{{ eachIngredient.item }}</td>
+            <td>{{ eachIngredient.buyingNotes }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+
+{% endfor %}
+
+{% endblock %}
+
