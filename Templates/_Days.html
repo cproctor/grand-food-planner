@@ -1,0 +1,35 @@
+<div class="day">
+    <h3> Day {{eachDay.number}} </h3>
+    {% for eachMeal in eachDay.meals %}       
+        <div class="meal">    
+            <h4> {{eachMeal.name}}: {{eachMeal.mealtype}} </h4>
+            
+            {% for eachLocation in eachMeal.locations %}       
+            <div class="storage-location">
+                <h5> {{eachLocation.name}}</h5>
+
+                <table>
+
+                    {% for eachItem in eachLocation.items %}
+    
+	                <tr>
+	                    <td> {{eachItem.quantity}} {{eachItem.unit}} </td>
+	    
+                        <td> {{eachItem.name}} </td>
+	    
+                    </tr>
+
+                    {% endfor %}
+
+                </table>
+            
+            </div>
+            {% endfor %}
+                    
+        </div>
+    {% endfor %}
+    
+</div>
+
+
+

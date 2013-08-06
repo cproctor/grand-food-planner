@@ -1,4 +1,17 @@
 <h3 class="store-name">{{store.name}}</h3>
-<ul>
-	<li>The shopping list for this store goes here.</li>
-</ul>
+<table>
+
+    {% for eachItem in store.items %}
+    
+	<tr>
+	    <td> {{eachItem.quantity}} {{eachItem.unit}} </td>
+	    
+	    <td> {{eachItem.name}} </td>
+	    
+	    <td> {{eachItem.buyNotes}} <td>
+	    
+	</tr>
+
+    {% endfor %}
+    
+</table>

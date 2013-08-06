@@ -30,17 +30,17 @@ class FoodPlannerView(object):
 
     def generate_buy_list(self):
         template = env.get_template('BuyList.html')
-        data = 'something???'
+        data = self.model.get_buy_list()
         return template.render(data)
 
     def generate_pack_list(self):
         template = env.get_template('PackList.html')
-        data = 'something???'
+        data = self.model.get_pack_list()
         return template.render(data)
 
     def generate_cook_list(self):
         template = env.get_template('CookList.html')
-        data = 'something???'
+        data = self.model.get_cook_list()
         return template.render(data)
 
         
