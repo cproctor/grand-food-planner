@@ -101,6 +101,6 @@ if args.reload:
 model = FoodPlannerModel(ingredients=INGREDIENTS, menus=MENUS, 
         purchases=PURCHASES)
 # Now we create the view, giving it the model as its data source
-#view = FoodPlannerView(model)
+view = FoodPlannerView(model)
 # Finally, tell the view to render, creating all the html files we want.
-#view.render(_BUILD_TARGET)
+view.render(_BUILD_TARGET)
