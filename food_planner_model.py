@@ -29,9 +29,53 @@ class FoodPlannerModel(object):
         }
         self.storageLocations = STORAGE_LOCATIONS
 
-        self.ingredients = self.generate_ingredients()
-        self.menuItems = self.generate_menu_items()
-        self.purchases = self.read_file(self.settings['purchases'])
+        #self.ingredients = self.generate_ingredients()
+        #self.menuItems = self.generate_menu_items()
+        #self.purchases = self.read_file(self.settings['purchases'])
+
+    def get_buy_list(self):
+        "Generate the data for a buy list"
+
+        # This is fake data!
+        return {
+            "stores": [
+                {
+                    'name': 'Seven-Eleven',
+                    'items': [
+                        {
+                            'quantity': 7,
+                            'unit': 'gallons',
+                            'name': 'Slurpee',
+                            'buyNotes': 'Mix Dr. Pepper with Cherry'
+                        },
+                        {
+                            'quantity': 12,
+                            'unit': 'bags',
+                            'name': 'Corn nuts',
+                            'buyNotes': ''
+                        }
+                    ]
+                },
+                {
+                    'name': 'JJ&F',
+                    'items': [
+                        {
+                            'quantity': 2,
+                            'unit': 'cups',
+                            'name': 'Fancy mustard',
+                            'buyNotes': 'mmm'
+                        },
+                        {
+                            'quantity': 2,
+                            'unit': 'oz',
+                            'name': 'Raw fish',
+                            'buyNotes': 'keep it clean'
+                        }
+                    ]
+                }
+
+            ]
+        }
 
     # Do all the work required to get a valid list of ingredients. 
     # If we're in strict mode, then kill the program if there are errors.
@@ -160,6 +204,7 @@ class FoodPlannerModel(object):
         # If we weren't strict, or there weren't any errors, we succeeded, so 
         # we can return result, which is the list of valid menu items.
         return result
+
 
 
     # ===============
