@@ -41,7 +41,7 @@ class FoodPlannerModel(object):
             "stores": [
                 {
                     'name': 'Seven-Eleven',
-                    'items': [
+                    'ingredients': [
                         {
                             'quantity': 7,
                             'unit': 'gallons',
@@ -58,7 +58,7 @@ class FoodPlannerModel(object):
                 },
                 {
                     'name': 'JJ&F',
-                    'items': [
+                    'ingredients': [
                         {
                             'quantity': 2,
                             'unit': 'cups',
@@ -75,6 +75,11 @@ class FoodPlannerModel(object):
                 }
 
             ]
+        }
+
+    def generate_pack_list(self):
+        return {
+            'menus':'menus'
         }
 
     # Do all the work required to get a valid list of ingredients. 
