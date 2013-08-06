@@ -8,54 +8,41 @@ env = Environment(loader=FileSystemLoader('Templates'))
 
 class FoodPlannerView(object):
 
-    def __init__(self, csvFileName, fieldNames, skipRows=0):
-        pass
+    def __init__(self, model):
+        self.model = model
 
     def build(self, buildPath):
         if os.path.isdir(buildPath):
             shutil.rmtree(buildPath)
         os.mkdir(buildPath)
         self.generate_final_document(
-            os.path.join(buildPath, "BuyPlan.html"), 
+            os.path.join(buildPath, "BuyList.html"), 
             self.generate_buy_list()
         )
         self.generate_final_document(
-            os.path.join(buildPath, "IngredientsByLocation.html"),
-            self.generate_ingredients_by_location()
+            os.path.join(buildPath, "PackList.html"), 
+            self.generate_pack_list()
         )
         self.generate_final_document(
-            os.path.join(buildPath, "MasterBuyList.html"),
-            self.generate_list_of_stores_for_ingredients()
+            os.path.join(buildPath, "CookList.html"), 
+            self.generate_cook_list()
         )
-        self.generate_ingredients_list(os.path.join(buildPath, "IngredientsList.txt"))
 
     def generate_buy_list(self):
         template = env.get_template('BuyList.html')
-        data = {"stores":self.get_stores()}
+        data = 'something???'
         return template.render(data)
-        
-    def generate_ingredients_by_location(self):
-        template = env.get_template('IngredientsByLocation.html')
-        data = {"storageLocations": self.sort_ingred_by_storage()}
-        #p(data)
+
+    def generate_pack_list(self):
+        template = env.get_template('PackList.html')
+        data = 'something???'
         return template.render(data)
-        
-    def generate_ingredients_list(self, whereToBuild):
-        with open(whereToBuild, 'w') as ingFile:
-            ingFile.write('\n'.join(self.ingredients()))
-            
-    def generate_list_of_stores_for_ingredients(self):
-        template = env.get_template('IngredientsStores.html')
-        ingStores = {}
-        def storeForIngredient(ingredient):
-            storesForIng = set([e['buyStore'] for e in self.data if e['item'] == ingredient])
-            if len(storesForIng) is 1:
-                return list(storesForIng)[0]
-            else:
-                return ""
-        for ingredient in self.ingredients():
-            ingStores[ingredient] = storeForIngredient(ingredient)
-        return template.render({"ingredients": ingStores})
+
+    def generate_cook_list(self):
+        template = env.get_template('CookList.html')
+        data = 'something???'
+        return template.render(data)
+
         
     def generate_final_document(self, whereToBuild, whatToBuildWith):
         with open(whereToBuild, "w") as buildFile:
