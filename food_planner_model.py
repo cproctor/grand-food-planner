@@ -669,7 +669,7 @@ class FoodPlannerModel(object):
             return 'Condiments Box'
 
         if storage == 'snacks':
-            return 'Snacks Box'
+            return  'Snack bags (divide and make one per boat)'
     
         if storage == 'drybox':
             if hasMeal:
