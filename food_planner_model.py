@@ -8,14 +8,11 @@ from pprint import pprint as p
 from datetime import datetime
 
 STORAGE_LOCATIONS = [
-    'inCoolerFrozen',
-    'inCoolerCool',
-    'inBoxVeg',
-    'inBoxFruit',
-    'inBoxDry',
-    'inBoxBread',
-    'inBoxOther',
-    'inCondiments'
+    'cooler',
+    'cooler (frozen)',
+    'drybox',
+    'condiments',
+    'snacks'
 ]
 
 NOW = datetime.now().strftime('%A %B %d, %Y at %I:%M %p')
@@ -196,6 +193,9 @@ class FoodPlannerModel(object):
             # Set default values so we'll always have some value in place 
             # for each property of an ingredient.
             eachIngredient = self.set_defaults(eachIngredient, defaults)
+            if not eachIngredient['storage'] in STORAGE_LOCATIONS:
+                self.warn_or_crash("Ingredient %s has an invalid storage location: %s" %
+                        (eachIngredient['name'], eachIngredient['storage']))
 
             result.append(eachIngredient)
 
@@ -228,7 +228,7 @@ class FoodPlannerModel(object):
             for firstString, secondString in similarNames:
                 errorList.append("  * '%s' is similar to '%s'" % 
                         (firstString, secondString))
-            self.warn_or_crash('\n'.join(errorList))
+            self.log('\n'.join(errorList))
 
         duplicates = self.check_for_duplicates(ingredientNames)
         if any(duplicates):
@@ -649,30 +649,46 @@ class FoodPlannerModel(object):
     def get_storage_container(self, item):
         ingredient = self.get_ingredient(item['name'])
         storage = ingredient['storage']
+        hasMeal = item['meal'] not in [None, ''] and item['day'] not in [None, '']
+        if hasMeal:
+            if item['meal'] in ['1B', '2L']:
+                bagNumber = max(int(item['day'] or 0) - 1, 0)
+            else:
+                bagNumber = int(item['day'])
+            containerNumber = (bagNumber / 5) + 1
 
-        if storage == 'NO STORAGE LOCATION':
+        # There are some special meal types
+        mealType = (self.get_menu_item(item) or {}).get('mealType')
+        if mealType == 'Snacks':
+            return 'Snack bags (divide and make one per boat)'
+
+        if not storage in STORAGE_LOCATIONS:
             return 'NO STORAGE LOCATION'
 
-        if storage == 'inCondiments':
-            return 'condiments box'
+        if storage == 'condiments':
+            return 'Condiments Box'
 
-        if storage == 'inBoxSnacks':
-            return 'snacks box'
+        if storage == 'snacks':
+            return 'Snacks Box'
+    
+        if storage == 'drybox':
+            if hasMeal:
+                return 'Bag %s in Drybox %s' % (bagNumber, containerNumber)
+            else:
+                return "Not assigned to a meal--Reserve drybox"
 
-        if item['meal'] in ['1B', '2L']:
-            bagNumber = int(item['day'] or 0) - 1
-        else:
-            bagNumber = int(item['day'] or -1)
-        containerNumber = (bagNumber / 5) + 1
-        if bagNumber == -1:
-            return "NO STORAGE LOCATION"
+        if storage == 'cooler':
+            if hasMeal:
+                return 'Bag %s in Cooler %s' % (bagNumber, containerNumber)
+            else:
+                return "Not assigned to a meal--Reserve cooler"
 
-        if 'inBox' in storage:
-            container = 'drybox'
-        if 'inCooler' in storage:
-            container = 'cooler'
-
-        return 'bag %s in %s %s' % (bagNumber, container, containerNumber)
+        if storage == 'cooler (frozen)':
+            if hasMeal:
+                return "At the bottom of cooler %s, labeled 'Day %s'" % (containerNumber, bagNumber)
+            else:
+                return "Not assigned to a meal--Reserve cooler (keep frozen at bottom)"
+                
 
     def get_time(self):
         return {'time': NOW}
