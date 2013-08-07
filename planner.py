@@ -53,7 +53,7 @@ MENUS = {
         'inBoxFruit',
         'inBoxDry',
         'inBoxBread',
-        'inBoxOther',
+        'inBoxSnacks',
         'inCondiments',
         'isPrecooked',
         'buyState',

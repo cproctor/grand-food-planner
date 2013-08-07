@@ -72,17 +72,20 @@ class FoodPlannerModel(object):
 
         return {"stores": stores}
             
-    
-        
-
-
-        
-
     def get_pack_list(self):
-        return {
-            'menus':[]
-        }
+        packItems = [{'container': self.get_storage_container(i), 'item': dict(i)} for i in self.menuItems]
+        containerList = list(set([i['container'] for i in packItems]))
+        containers = []
+        for container in containerList:
+            itemList = sorted([i['item'] for i in packItems if i['container'] == container], key=lambda i: i['name'])
+            for item in itemList:
+                item['packNotes'] = '; '.join(self.get_purchase_notes(item['name']))
 
+            containers.append({
+                'itemList': itemList,
+                'name': container
+            })
+        return {"containers": sorted(containers, key=lambda i: i['name'])}
 
     # Do all the work required to get a valid list of ingredients. 
     # If we're in strict mode, then kill the program if there are errors.
@@ -540,11 +543,42 @@ class FoodPlannerModel(object):
             if menuItem['name'] == name and menuItem['buyingNotes']:
                 label = ' '.join([i for i in ['Menu', menuItem.get('day', ''),menuItem.get('meal', '')] if i])
                 buyNotes.append('[%s] %s' % (label, menuItem['buyingNotes']))
+        buyNotes += self.get_purchase_notes(name)
+        return filter(lambda i: i, buyNotes)
+
+    def get_purchase_notes(self, name):
+        notes = []
         for purchase in self.purchases:
             if purchase['name'] == name:
                 label = ' '.join([i for i in ['Purchase', purchase.get('day', ''), purchase.get('meal', '')] if i])
-                buyNotes.append("[%s] %s bought on %s" % (label, purchase['description'], purchase['shoppingTrip']))
+                notes.append("[%s] %s bought on %s" % (label, purchase['description'], purchase['shoppingTrip']))
                 if purchase['notes']:
-                    buyNotes.append("[%s] %s" % (label, purchase['notes']))
-        return buyNotes
-                
+                    notes.append("[%s] %s" % (label, purchase['notes']))
+        return notes
+
+
+    def get_storage_container(self, menuItem):
+        storage = menuItem['storage']
+
+        if storage == 'NO STORAGE LOCATION':
+            return 'NO STORAGE LOCATION'
+
+        if storage == 'inCondiments':
+            return 'condiments box'
+
+        if storage == 'inBoxSnacks':
+            return 'snacks box'
+
+        if menuItem['meal'] in ['1B', '2L']:
+            bagNumber = int(menuItem['day'] or 0) - 1
+        else:
+            bagNumber = int(menuItem['day'] or -1)
+
+        containerNumber = (bagNumber / 5) + 1
+
+        if 'inBox' in storage:
+            container = 'drybox'
+        if 'inCooler' in storage:
+            container = 'cooler'
+
+        return 'bag %s in %s %s' % (bagNumber, container, containerNumber)

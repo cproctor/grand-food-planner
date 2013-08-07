@@ -3,11 +3,18 @@
 
 <h1> Packing List </h1>
 
-{% for eachDay in menus %}
-   {% include '_Days.html' %}
-
-{% endfor %}
-
+    {% for container in containers %}
+    <h3>{{container.name}}</h3>
+    <table>
+        {% for item in container.itemList %}
+            <tr>
+                <td>{{item.quantity}} {{item.unit}} {{item.name}}</td>
+                <td>{{item.packNotes}}
+                
+            </tr>
+        {% endfor %}
+    </table>
+    {% endfor %}
 
 {% endblock %}
 
