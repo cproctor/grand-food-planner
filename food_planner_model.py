@@ -87,6 +87,7 @@ class FoodPlannerModel(object):
                     'unit': record['unit'],
                     'quantity': self.get_quantity_required(record['name'], record['unit']),
                     'container': self.get_storage_container(record),
+                    'buyStore': self.get_ingredient(record['name'])['buyStore'],
                     'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
                 })
         records = sorted(records, key=lambda r: r['name'])
@@ -621,8 +622,7 @@ class FoodPlannerModel(object):
                 if purchase['description']:
                     purchaseNotes.append(
                         labelString + 
-                        ("%(description)s was bought on %(shoppingTrip)s" %
-                        purchase)
+                        ("%(count)s * (%(unitsPerCount)s %(unit)s) %(description)s bought on %(shoppingTrip)s" % purchase)
                     )
         return purchaseNotes
 
