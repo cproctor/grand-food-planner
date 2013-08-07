@@ -80,23 +80,13 @@ class FoodPlannerModel(object):
     def get_pack_list(self):
         records = []
         # Get a list of all unique combinations of name and unit
-        for record in self.menuItems:
+        for record in self.menuItems + self.purchases:
             if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
                 records.append({
                     'name': record['name'],
                     'unit': record['unit'],
                     'quantity': self.get_quantity_required(record['name'], record['unit']),
                     'container': self.get_storage_container(record),
-                    'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
-                })
-        for record in self.purchases:
-            if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
-                records.append({
-                    'name': record['name'],
-                    'unit': record['unit'],
-                    'quantity': self.get_quantity_required(record['name'], record['unit']),
-                    'container': self.get_storage_container(self.get_menu_item(record) or
-                            {'storage': 'NO STORAGE LOCATION'}),
                     'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
                 })
         records = sorted(records, key=lambda r: r['name'])
@@ -583,11 +573,14 @@ class FoodPlannerModel(object):
     def get_storage_location(self, menuItem):
         # Go through each storage location and see if this menuItem
         # is stored there.
-        for location in self.storageLocations:
-            if menuItem.get(location, False):
-                return location
+        #for location in self.storageLocations:
+            #if menuItem.get(location, False):
+                #return location
         # If we didn't find a match...
-        return "NO STORAGE LOCATION"
+
+        # Now we just get it from the ingredients table
+        return ((self.get_ingredient(menuItem['name']) or {}).get('storage') or 
+                "NO STORAGE LOCATION")
 
     def get_quantity_purchased(self, itemName, unit):
         quantityPurchased = 0
@@ -652,8 +645,9 @@ class FoodPlannerModel(object):
         else:
             return ''
 
-    def get_storage_container(self, menuItem):
-        storage = menuItem['storage']
+    def get_storage_container(self, item):
+        ingredient = self.get_ingredient(item['name'])
+        storage = ingredient['storage']
 
         if storage == 'NO STORAGE LOCATION':
             return 'NO STORAGE LOCATION'
@@ -664,10 +658,10 @@ class FoodPlannerModel(object):
         if storage == 'inBoxSnacks':
             return 'snacks box'
 
-        if menuItem['meal'] in ['1B', '2L']:
-            bagNumber = int(menuItem['day'] or 0) - 1
+        if item['meal'] in ['1B', '2L']:
+            bagNumber = int(item['day'] or 0) - 1
         else:
-            bagNumber = int(menuItem['day'] or -1)
+            bagNumber = int(item['day'] or -1)
         containerNumber = (bagNumber / 5) + 1
         if bagNumber == -1:
             return "NO STORAGE LOCATION"

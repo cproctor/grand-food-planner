@@ -31,6 +31,7 @@ INGREDIENTS = {
     "fieldNames" : [
         'name',
         'buyStore',
+        'storage',
         'buyStoreAlternate',
         'notes'
     ]
@@ -47,18 +48,7 @@ MENUS = {
         'item',
         'cookingNotes',
         'quantity',
-        'inCoolerFrozen',
-        'inCoolerCool',
-        'inBoxVeg',
-        'inBoxFruit',
-        'inBoxDry',
-        'inBoxBread',
-        'inBoxSnacks',
-        'inCondiments',
         'isPrecooked',
-        'buyState',
-        'buyStore',
-        'alternateStore',
         'purchased',
         'buyingNotes'
     ]
