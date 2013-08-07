@@ -3,7 +3,9 @@ import csv
 import re
 import os
 import inspect
+import time
 from pprint import pprint as p
+from datetime import datetime
 
 STORAGE_LOCATIONS = [
     'inCoolerFrozen',
@@ -15,6 +17,8 @@ STORAGE_LOCATIONS = [
     'inBoxOther',
     'inCondiments'
 ]
+
+NOW = datetime.now().strftime('%A %B %d, %Y at %I:%M %p')
 
 class FoodPlannerModel(object):
 
@@ -70,7 +74,7 @@ class FoodPlannerModel(object):
                 'ingredients': ingredientsFromStore
             })
 
-        return {"stores": stores}
+        return {"stores": stores, "time": NOW}
             
     def get_pack_list(self):
         packItems = [{'container': self.get_storage_container(i), 'item': dict(i)} for i in self.menuItems]
@@ -85,7 +89,7 @@ class FoodPlannerModel(object):
                 'itemList': itemList,
                 'name': container
             })
-        return {"containers": sorted(containers, key=lambda i: i['name'])}
+        return {"containers": sorted(containers, key=lambda i: i['name']), "time": NOW}
 
     # Do all the work required to get a valid list of ingredients. 
     # If we're in strict mode, then kill the program if there are errors.
@@ -573,8 +577,9 @@ class FoodPlannerModel(object):
             bagNumber = int(menuItem['day'] or 0) - 1
         else:
             bagNumber = int(menuItem['day'] or -1)
-
         containerNumber = (bagNumber / 5) + 1
+        if bagNumber == -1:
+            return "NO STORAGE LOCATION"
 
         if 'inBox' in storage:
             container = 'drybox'
