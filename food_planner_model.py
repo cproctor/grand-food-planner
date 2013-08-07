@@ -623,7 +623,7 @@ class FoodPlannerModel(object):
                 if purchase['description']:
                     purchaseNotes.append(
                         labelString + 
-                        ("%(count)s * (%(unitsPerCount)s %(unit)s) %(description)s bought on %(shoppingTrip)s" % purchase)
+                        ("%(count)s * (%(unitsPerCount)s %(unit)s) %(description)s from %(shoppingTrip)s" % purchase)
                     )
         return purchaseNotes
 
