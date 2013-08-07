@@ -75,21 +75,51 @@ class FoodPlannerModel(object):
             })
 
         return {"stores": stores, "time": NOW}
+
             
     def get_pack_list(self):
-        packItems = [{'container': self.get_storage_container(i), 'item': dict(i)} for i in self.menuItems]
-        containerList = list(set([i['container'] for i in packItems]))
+        records = []
+        # Get a list of all unique combinations of name and unit
+        for record in self.menuItems:
+            if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
+                records.append({
+                    'name': record['name'],
+                    'unit': record['unit'],
+                    'quantity': self.get_quantity_required(record['name'], record['unit']),
+                    'container': self.get_storage_container(record),
+                    'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
+                })
+        for record in self.purchases:
+            if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
+                records.append({
+                    'name': record['name'],
+                    'unit': record['unit'],
+                    'quantity': self.get_quantity_required(record['name'], record['unit']),
+                    'container': self.get_storage_container(self.get_menu_item(record) or
+                            {'storage': 'NO STORAGE LOCATION'}),
+                    'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
+                })
+        records = sorted(records, key=lambda r: r['name'])
+
+        containerList = list(set([i['container'] for i in records]))
         containers = []
         for container in containerList:
-            itemList = sorted([i['item'] for i in packItems if i['container'] == container], key=lambda i: i['name'])
-            for item in itemList:
-                item['packNotes'] = '; '.join(self.get_purchase_notes(item['name']))
+            containerRecords = filter(lambda r: r['container'] == container, records)
 
             containers.append({
-                'itemList': itemList,
+                'itemList': containerRecords,
                 'name': container
             })
         return {"containers": sorted(containers, key=lambda i: i['name']), "time": NOW}
+
+    def get_menu_item(self, purchase):
+        "Find a matching menu item for a purchase"
+        for menuItem in self.menuItems:
+            if ((purchase['name'] == menuItem['name']) and
+                (purchase['day'] == menuItem['day'] or not purchase['day']) and
+                (purchase['meal'] == menuItem['meal'] or not purchase['meal'])):
+                return menuItem
+        self.warn_or_crash("Can't find a menu item matching purchase %s" % purchase)
 
     def get_cook_list(self):
         cookList = []
