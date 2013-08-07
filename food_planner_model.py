@@ -175,6 +175,7 @@ class FoodPlannerModel(object):
             # NOTE: We decided that when there's no buyStore, we'll fake
             # it for now.
             'buyStore'          : 'NO STORE DEFINED',
+            'storage'           : 'NO STORAGE LOCATION',
             'buyStoreAlternate' : 'None',
             'notes'             : ''
         }
