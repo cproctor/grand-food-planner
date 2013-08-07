@@ -617,7 +617,7 @@ class FoodPlannerModel(object):
 
     def _note_label(self, prefix, item, labelWanted):
         if labelWanted:
-            labelList = [prefix, item.get('day', ''), item.get('meal', '')]
+            labelList = [prefix, item.get('day', ''), (item.get('meal') or ['',''])[1]]
             return '[%s] ' % ' '.join(filter(None, labelList))
         else:
             return ''
