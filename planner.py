@@ -49,7 +49,6 @@ MENUS = {
         'cookingNotes',
         'quantity',
         'isPrecooked',
-        'purchased',
         'buyingNotes'
     ]
  }
