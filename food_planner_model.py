@@ -3,6 +3,7 @@ import csv
 import re
 import os
 import inspect
+from pprint import pprint as p
 
 STORAGE_LOCATIONS = [
     'inCoolerFrozen',
@@ -20,8 +21,10 @@ class FoodPlannerModel(object):
     # The initialization function. By the end of __init__, the 
     # model should be ready to be used by a view
     def __init__(self, ingredients=None, menus=None, purchases=None, 
-            verbose=False):
+            verbose=False, strict=False, warnings=False):
         self.verbose = verbose
+        self.strict = strict
+        self.showWarnings = warnings or verbose
         self.settings = {
             "ingredients"   : ingredients,
             "menus"         : menus,
@@ -29,62 +32,81 @@ class FoodPlannerModel(object):
         }
         self.storageLocations = STORAGE_LOCATIONS
 
-        #self.ingredients = self.generate_ingredients()
-        #self.menuItems = self.generate_menu_items()
-        #self.purchases = self.read_file(self.settings['purchases'])
+        self.ingredients = self.generate_ingredients()
+        self.menuItems = self.generate_menu_items()
+        self.purchases = self.generate_purchases()
+
+    def x_get_buy_list(self):
+        "Generate the data for a buy list"
+
+        stores = []
+        summedMenuItems = self.menu_item_totals()
+
+        for eachStore in self.store_names():
+            ingredientsFromStore = [i for i in summedMenuItems if i['buyStore'] == eachStore]
+            for storeItem in ingredientsFromStore:
+                storeItem['quantityRequired'] = storeItem['quantity']
+                storeItem['quantityPurchased'] = self.get_quantity_purchased(
+                        storeItem['name'], storeItem['unit']) 
+                storeItem['quantityStillNeeded'] = storeItem['quantityRequired'] - storeItem['quantityPurchased']
+            stores.append({
+                'name': eachStore,
+                'ingredients': ingredientsFromStore
+            })
+
+        return {"stores": stores}
 
     def get_buy_list(self):
         "Generate the data for a buy list"
+        records = []
+        # Get a list of all unique combinations of name and unit
+        for record in self.purchases + self.menuItems:
+            if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
+                records.append({
+                    'name': record.get('name', record.get('item')),
+                    'unit': record['unit'],
+                    'store': self.get_ingredient_store(record['name'])
+                })
 
-        # This is fake data!
+        stores = []
+        for store in self.store_names():
+            storeRecords = [r for r in records if r['store'] == store]
+            ingredientsFromStore = []
+            for record in storeRecords:
+                required = self.get_quantity_required(record['name'], record['unit'])
+                purchased = self.get_quantity_purchased(record['name'], record['unit'])
+                ingredientsFromStore.append({
+                    'name': record['name'],
+                    'unit': record['unit'],
+                    'quantityRequired': required,
+                    'quantityPurchased': purchased,
+                    'quantityStillNeeded': required - purchased
+                })
+            ingredientsFromStore = sorted(ingredientsFromStore, key=lambda i: i['name'])
+            
+            stores.append({
+                'name': store,
+                'ingredients': ingredientsFromStore
+            })
+
+        return {"stores": stores}
+            
+    
+        
+
+
+        
+
+    def get_pack_list(self):
         return {
-            "stores": [
-                {
-                    'name': 'Seven-Eleven',
-                    'ingredients': [
-                        {
-                            'quantity': 7,
-                            'unit': 'gallons',
-                            'name': 'Slurpee',
-                            'buyNotes': 'Mix Dr. Pepper with Cherry'
-                        },
-                        {
-                            'quantity': 12,
-                            'unit': 'bags',
-                            'name': 'Corn nuts',
-                            'buyNotes': ''
-                        }
-                    ]
-                },
-                {
-                    'name': 'JJ&F',
-                    'ingredients': [
-                        {
-                            'quantity': 2,
-                            'unit': 'cups',
-                            'name': 'Fancy mustard',
-                            'buyNotes': 'mmm'
-                        },
-                        {
-                            'quantity': 2,
-                            'unit': 'oz',
-                            'name': 'Raw fish',
-                            'buyNotes': 'keep it clean'
-                        }
-                    ]
-                }
-
-            ]
+            'menus':[]
         }
 
-    def generate_pack_list(self):
-        return {
-            'menus':'menus'
-        }
 
     # Do all the work required to get a valid list of ingredients. 
     # If we're in strict mode, then kill the program if there are errors.
-    def generate_ingredients(self, strict=True):
+    def generate_ingredients(self):
+        self.log("GENERATING INGREDIENTS")
 
         # We'll start with the raw data.
         ingredients = self.read_file(self.settings['ingredients'])
@@ -99,45 +121,80 @@ class FoodPlannerModel(object):
 
         # The default values, in case a property is not set
         defaults = {
+            # NOTE: We decided that when there's no buyStore, we'll fake
+            # it for now.
+            'buyStore'          : 'NO STORE DEFINED',
             'buyStoreAlternate' : 'None',
             'notes'             : ''
         }
 
         for eachIngredient in ingredients:
+
+            # Strip off whitespace from all strings, so that 'pickles' matches 
+            # 'pickles '
+            self.strip_strings_in_dict(eachIngredient)
+
             # Use the is_empty helper method to see whether this was a blank
             # If so, we call continue, which skips the rest of this loop 
             # iteration and starts with the next eachIngredient
-            if self.is_empty(eachIngredient):
+            if self.is_empty(eachIngredient) or not eachIngredient['name']:
+                self.log("skipping empty row: %s" % eachIngredient)
                 continue
 
             # Set default values so we'll always have some value in place 
             # for each property of an ingredient.
             eachIngredient = self.set_defaults(eachIngredient, defaults)
 
+            result.append(eachIngredient)
+
+            # NOTE: Changed the flow here--no longer checking for required
+            # properties. Instead, we're going to just go with it.
             # Now we have to check whether there's a name and a buyStore,
             # the minimum requirements for an ingredient. If there is, 
             # add it to our result list.
-            if self.has_properties(eachIngredient, requiredProperties):
-                result.append(eachIngredient)
+            #if self.has_properties(eachIngredient, requiredProperties):
+                #result.append(eachIngredient)
             # If not, make a note in errors
-            else:
-                errors.append("Invalid ingredient: %s" % eachIngredient)
+            #else:
+                #errors.append("Invalid ingredient: %s" % eachIngredient)
 
         # If we're in strict mode, things should fail if there are errors.
         # In this case, we'll raise a ValueError, and give it an explanation
         # of what went wrong. We use '\n'.join(errors) to convert the list
         # of errors into a string with a \n, the newline character, between each
-        if strict and any(errors):
-            raise ValueError("Invalid ingredients:\n" + '\n'.join(errors))
+        if any(errors):
+            error = "Invalid ingredients:\n" + '\n'.join(errors)
+            if self.strict:
+                raise ValueError(error)
+            else:
+                self.warn(error)
+
+        ingredientNames = [i['name'] for i in result]
+        similarNames = self.check_for_similar_strings(ingredientNames)
+        if any(similarNames):
+            errorList =  ["Found similar ingredient names:"]
+            for firstString, secondString in similarNames:
+                errorList.append("  * '%s' is similar to '%s'" % 
+                        (firstString, secondString))
+            self.warn_or_crash('\n'.join(errorList))
+
+        duplicates = self.check_for_duplicates(ingredientNames)
+        if any(duplicates):
+            errorList = ["Found duplicates in ingredients:"]
+            for dup in duplicates:
+                errorList.append("  * %s" % dup)
+            self.warn_or_crash('\n'.join(errorList))
 
         # If we weren't strict, or there weren't any errors, we succeeded, so 
         # we can return result, which is the list of valid ingredients. Just for
         # fun, we'll sort them in alphabetical order.
-        return sorted(result, key='name')
+        #return sorted(result, key='name')
+        return result
 
     # Generate the menu items. This will follow much the same pattern as
     # generate_ingredients. 
     def generate_menu_items(self):
+        self.log("GENERATING MENU ITEMS")
 
         # Get the raw data, and create lists for the result and the errors
         menuItems = self.read_file(self.settings['menus'])
@@ -148,8 +205,8 @@ class FoodPlannerModel(object):
         requiredProperties = [
             'day',
             'meal',
-            'mealType',
-            'dish',
+            #'mealType',
+            #'dish',
             'item',
             'quantity'
         ]
@@ -159,21 +216,16 @@ class FoodPlannerModel(object):
             'buyingNotes': ''
         }
 
-        # A helper function that returns the storage location of a menu item
-        def get_storage_location(menuItem):
-            # Go through each storage location and see if this menuItem
-            # is stored there.
-            for location in self.storageLocations:
-                if menuItem.get(location, False):
-                    return location
-            # If we didn't find a match...
-            return "NO STORAGE LOCATION"
-
         # Work with the menuItems one at a time...
         for eachMenuItem in menuItems:
 
-            # Again, skip the blanks
-            if self.is_empty(eachMenuItem):
+            # Strip off whitespace from all strings, so that 'pickles' matches 
+            # 'pickles '
+            self.strip_strings_in_dict(eachMenuItem)
+
+            # Again, skip the blanks--or anything without an item name
+            if self.is_empty(eachMenuItem) or not eachMenuItem['item']:
+                self.log("skipping empty row: %s" % eachMenuItem)
                 continue
 
             # Check whether it has the required properties
@@ -188,28 +240,59 @@ class FoodPlannerModel(object):
                     # defaults, its ingredient data, and its storage location
                     eachMenuItem = self.set_defaults(eachMenuItem, defaults)
                     eachMenuItem = self.set_ingredient_data(eachMenuItem, eachMenuItem['item'])
-                    eachMenuItem['storage'] = get_storage_location(eachMenuItem)
+                    eachMenuItem['storage'] = self.get_storage_location(eachMenuItem)
+
+                    # parse the quantity string
+                    parsedQuantity = self.parse_quantity_string(str(eachMenuItem['quantity']))
+                    self.log("parsing '%s' as '%s' of unit '%s' (using parse method %s)" % (str(eachMenuItem['quantity']), parsedQuantity['quantity'], parsedQuantity['unit'], parsedQuantity['parseMethod']))
+            
+                    # Update selectively overwrites a dict's values with another 
+                    # dict's values. Here, parsedQuantity contains 'quantity' and 
+                    # 'unit'
+                    eachMenuItem.update(parsedQuantity)
 
                     # And add this menu item to the list of good ones
                     result.append(eachMenuItem)
 
                 else:
-                    errors.append("Invalid menu item: there is no ingredient named %s" % 
-                            eachMenuItem['item'])
+                    errors.append("Skipping invalid menu item '%s': there is no ingredient named %s" % 
+                            (eachMenuItem['item'], eachMenuItem['item']))
             else:
-                errors.append("Invalid menu item: missing properties: %s" % eachMenuItem)
+                errors.append("Skipping invalid menu item %s: missing properties: %s" % 
+                        (eachMenuItem['item'], eachMenuItem))
 
         # If we're in strict mode, things should fail if there are errors.
         # In this case, we'll raise a ValueError, and give it an explanation
         # of what went wrong. We use '\n'.join(errors) to convert the list
         # of errors into a string with a \n, the newline character, between each
-        if strict and any(errors):
-            raise ValueError("Invalid menu items:\n" + '\n'.join(errors))
+        if any(errors):
+            error = "Invalid menu items:\n" + '\n'.join(["  * %s" % e for e in errors])
+            if self.strict:
+                raise ValueError(error)
+            else: 
+                self.warn(error)
 
         # If we weren't strict, or there weren't any errors, we succeeded, so 
         # we can return result, which is the list of valid menu items.
         return result
 
+    def generate_purchases(self):
+        purchases = self.read_file(self.settings['purchases'])
+        goodPurchases = []
+        for purchase in purchases:
+            if not purchase['unit']:
+                purchase['unit'] = 'count'
+            if not purchase['unitsPerCount']:
+                purchase['unitsPerCount'] = 1
+            purchase['name'] = purchase['name'].lower()
+            purchase['count'] = float(purchase['count'])
+            purchase['unitsPerCount'] = float(purchase['unitsPerCount'])
+            purchase['unit'] = purchase['unit'].strip().strip('.')
+            if self.get_ingredient(purchase['name']):
+                goodPurchases.append(purchase)
+            else:
+                self.warn_or_crash("Skipping invalid purchase: there is no ingredient named %s" % purchase['name'])
+        return goodPurchases
 
 
     # ===============
@@ -231,10 +314,10 @@ class FoodPlannerModel(object):
             # The reader has a 'cursor' pointing to the place in the file it's 
             # currently reading from. Every time we call read, it moves the cursor 
             # forward. (You could call reader.rewind() if you wanted). But we want
-            # to skip some number of rows, so we'll call reader.read() without 
+            # to skip some number of rows, so we'll call reader.next() without 
             # capturing the data some number of times.
             for eachRowToSkip in range(fileSettings['rowsToSkip']):
-                reader.read()
+                self.log("Skipping header row: %s" % reader.next())
 
             # Now we'll convert the rest of the rows available into a list, so 
             # we can let the reader release the file and still have a copy of
@@ -243,30 +326,29 @@ class FoodPlannerModel(object):
 
     def has_properties(self, dictToTest, properties):
         "Check whether a dict has certain properties defined"
-    
-        # Go through each required property and make sure the dict has it.
-        # If not, return False
-        for prop in properties:
-            if not dictToTest.get(prop):
-                return False
+        return not any(self.missing_properties(dictToTest, properties))
 
-        # The dict had all the properties. Return True.
-        return True
+    def missing_properties(self, dictToTest, properties):
+        "Returns a list of properties missing from a dict"
+        # Go through each required property and make sure the dict has it.
+        # If not, add this prop to missing.
+        missing = []
+        for prop in properties:
+            if dictToTest.get(prop, None) is None:
+                missing.append(prop)
+        return missing
 
     def set_defaults(self, dictToUpdate, defaults):
         "Return a dict with defaults set"
         
-        # It's necessary to create a copy of the dict--otherwise, we would
-        # actually change the dict that got passed in. It's surprising to 
-        # have a function mess with values you pass in, and in programming,
-        # surprises are bad. Don't expect yourself to fully get why this is 
-        # necessary yet.
-        newDict = dict(defaults)
+        newDict = dict(dictToUpdate)
 
         # Overwrite each property in newDict with the properties in dictToUpdate
         # Effectively, this means the only default settings remaining will be
         # those that aren't set in dictToUpdate
-        newDict.update(dictToUpdate)
+        for key, value in defaults.iteritems():
+            if not newDict.get(key):
+                newDict[key] = value
         
         return newDict
 
@@ -319,57 +401,153 @@ class FoodPlannerModel(object):
         else:
             return False
 
+    def store_names(self):
+        "Return a list of all store names"
+        return sorted(list(set([i['buyStore'] for i in self.ingredients])))
 
-# ===============================================================================
-# THESE WERE OLD METHODS THAT PERTAINED TO THE MODEL. WE MAY OR MAY NOT NEED THEM
-# ===============================================================================
+    def ingredient_names(self):
+        "Return a list of ingredient names"
+        return sorted([i['name'] for i in self.ingredients])
 
-    def ingredients(self):
-        ingredients = set([entry.get('item') for entry in self.data])
-        #print "We are using the following ingredients on our trip"
-        #for i in sorted(ingredients, key=str.lower):
-        #    print "  * %s" % i
-        ingredients = [i.strip() for i in ingredients]
-        return ingredients
+    def menu_item_totals(self):
+        "Return a list of menu items, where items of the same name are joined"
+        itemTotals = []
+        for eachIngredient in self.ingredients:
+            ingredientUses = [i for i in self.menuItems if i['name'] == eachIngredient['name']]
+            ingredientUnits = list(set([i['unit'] for i in ingredientUses]))
+            for ingredientUnit in ingredientUnits:
+                ingredientUsesWithUnit = [i for i in ingredientUses if i['unit'] == ingredientUnit]
+                if any(ingredientUsesWithUnit):
+                    totalQuantity = sum([i['quantity'] for i in ingredientUsesWithUnit])
+                    buyNotes = filter(lambda i: i, [i['notes'] for i in ingredientUsesWithUnit])
+                    buyNotes.append(eachIngredient['notes'])
+                    ingredientTotal = ingredientUses[0]
+                    ingredientTotal.update({
+                        'quantity': totalQuantity,
+                        'buyNotes': '; '.join(buyNotes)
+                    })
+                    itemTotals.append(ingredientTotal)
+        return itemTotals
+
+    def parse_quantity_string(self, quantityString):
+        numericalQuantity = "^\s*~?(\d+(\.\d+)?)\s*(.+)$"
+        fractionalQuantity = "^\s*~?(\d+)\s*/\s*(\d+)\s*(.+)$"
+        noUnitQuantity = "^\s*~?(\d+(\.\d+)?)\s*$"
+
+        # ex: 16
+        result = re.match(noUnitQuantity, quantityString)
+        if result:
+            return {
+                'quantity': float(result.group(1)),
+                'unit': 'count',
+                'parseMethod': 'noUnitQuantity'
+            }
+
+        # ex: 3/4 cup
+        result = re.match(fractionalQuantity, quantityString)
+        if result:
+            return {
+                'quantity': float(result.group(1)) / int(result.group(2)),
+                'unit': result.group(3).strip(),
+                'parseMethod': 'fractionalQuantity'
+            }
     
-    # this function creates a dict of storage locations pair with lists of ingredients to
-    # be stored in those locations
-    def sort_ingred_by_storage(self):
-        # For each storage location make a list with all items that are associated with it
-        # To create the desired dict, we are making the empty dict variable ingredientsByStorageLocation to be filled later
-        ingredientsByStorageLocation = {}
-        # The below function creates a single list of ingredients associated with a particular location
-        def ingredients_in_location(location):
-            #print "I have no idea what's going on, but somebody wants to find the ingredients in %s" % location
-            ingredientsInLocation = []
-            # For given storage location, list ingredients stored here.
-            for eachEntry in self.data:
-                # Here we are checking if the particular location we're comparing to for this
-                # iteration of this bit of code is equivalent to the location of the 
-                # item in the spreadsheet
-                # Trouble! eachItem doesn't have a storage property. Let's see what is there...
-                if location == eachEntry['storage']:
-                    ingredientsInLocation.append(eachEntry)
-            #print "The ingredients in %s are %s" % (location, ', '.join(sorted(ingredientsInLocation)))
-            def prepareForComparison(entry):
-                return entry['item']
-            return sorted(ingredientsInLocation, key=prepareForComparison)
-        # In this for loop, we create a local variable called eachStorageLocation
-        # into which we iteratively pass values from self.storageLocations
-        for eachStorageLocation in self.storageLocations:
-            # The following syntax allows us to assign values to keys within the dict we 
-            # are ultimately creating
-            #print "I am currently working with %s" % eachStorageLocation   
-            ingredientsByStorageLocation[eachStorageLocation] = ingredients_in_location(eachStorageLocation)
-        return ingredientsByStorageLocation
-    
-    def get_stores(self):
-        storeNames = set([entry.get('buyStore') for entry in self.data])
-        return [{"name":eachStoreName} for eachStoreName in storeNames] 
+        # ex: 12 pounds
+        result = re.match(numericalQuantity, quantityString)
+        if result:
+            return {
+                'quantity': float(result.group(1)),
+                'unit': result.group(3).strip(),
+                'parseMethod': 'numericalQuantity'
+            }
+
+        # ex: dozen
+        if len(quantityString.strip()) > 0:
+            return {
+                'quantity': 1,
+                'unit': quantityString.strip(),
+                'parseMethod': 'unitNoQuantity'
+            }
+
+        # it's blank
+        else:
+            return {
+                'quantity': 1,
+                'unit': 'count',
+                'parseMethod': 'blankOneCount'
+            }
+
+    def check_for_similar_strings(self, strings):
+        "Compare each string against each other. This is slow."
+        similarStrings = []
+        for firstString in strings:
+            for secondString in strings:
+                if firstString in secondString and firstString != secondString:
+                    similarStrings.append([firstString, secondString])
+        return similarStrings
+
+    def check_for_duplicates(self, strings):
+        uniques = []
+        duplicates = []
+        for string in strings:
+            if string in uniques:
+                duplicates.append(string)
+            else:
+                uniques.append(string)
+        return duplicates
+
+    def strip_strings_in_dict(self, dictToStrip):
+        stringKeys = [key for key, val in dictToStrip.iteritems() if isinstance(val, basestring)]
+        for key in stringKeys:
+            dictToStrip[key] = dictToStrip[key].strip()
+
 
     # As in SpreadsheetLoader, this method handles the logic around whether and
     # how to report messages.
     def log(self, message):
         "Log a message"
         if self.verbose:
-            print message
+            print "INFO " + message
+
+    def warn(self, warning):
+        if self.showWarnings:
+            print "WARN " + warning
+
+    def warn_or_crash(self, warning):
+        if self.strict:
+            raise ValueError(warning)
+        else:
+            self.warn(warning)
+
+    # A helper function that returns the storage location of a menu item
+    def get_storage_location(self, menuItem):
+        # Go through each storage location and see if this menuItem
+        # is stored there.
+        for location in self.storageLocations:
+            if menuItem.get(location, False):
+                return location
+        # If we didn't find a match...
+        return "NO STORAGE LOCATION"
+
+    def get_quantity_purchased(self, itemName, unit):
+        quantityPurchased = 0
+        for purchase in self.purchases:
+            if purchase['name'] == itemName and purchase['unit'] == unit:
+                quantityPurchased += purchase['count'] * purchase['unitsPerCount']
+        return quantityPurchased
+
+    def get_quantity_required(self, itemName, unit):
+        quantityPurchased = 0
+        for requirement in self.menuItems:
+            if requirement['name'] == itemName and requirement['unit'] == unit:
+                quantityPurchased += requirement['quantity']
+        return quantityPurchased
+
+
+    def get_ingredient_store(self, name):
+        for ingredient in self.ingredients:
+            if ingredient['name'] == name:
+                return ingredient['buyStore']
+
+
+

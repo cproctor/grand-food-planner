@@ -38,7 +38,7 @@ INGREDIENTS = {
 MENUS = {
     "url": 'https://docs.google.com/spreadsheet/ccc?key=0Au3OsR7L9ksedGpJdHRGWjlOaVFtZzkxRUhESEl6YlE&output=csv&gid=19',
     "file": 'menus.csv',
-    "rowsToSkip": 0,
+    "rowsToSkip": 4,
     "fieldNames": [
         'day',
         'meal',
@@ -66,8 +66,18 @@ MENUS = {
 PURCHASES = {
     "url":'https://docs.google.com/spreadsheet/ccc?key=0Au3OsR7L9ksedGpJdHRGWjlOaVFtZzkxRUhESEl6YlE&output=csv&gid=27',
     "file": 'purchases.csv',
-    "rowsToSkip": 0,
-    "fieldNames": []
+    "rowsToSkip": 1,
+    "fieldNames": [
+        'name',
+        'count',
+        'unitsPerCount',
+        'unit',
+        'description',
+        'shoppingTrip',
+        'notes',
+        'day',
+        'meal'
+    ]
  }
 BUILD_TARGET = '_build'
 
@@ -83,6 +93,10 @@ parser = argparse.ArgumentParser(description='''
 )
 parser.add_argument('--reload', '-r', default=False, action="store_true",
         help="Reload the data files before running")
+parser.add_argument('--warnings', '-w', default=False, action="store_true",
+        help="Show warnings")
+parser.add_argument('--verbose', '-v', default=False, action="store_true",
+        help="Display lots of information about what's going on")
 
 # We're done defining the arguments, so we can now tell the parser to look at 
 # what got passed in and to make sense of it as the arguments we defined.
@@ -99,8 +113,8 @@ if args.reload:
 # Now we create the model, telling it where to find its files and how
 # to make sense of them.
 model = FoodPlannerModel(ingredients=INGREDIENTS, menus=MENUS, 
-        purchases=PURCHASES)
+        purchases=PURCHASES, warnings=args.warnings, verbose=args.verbose)
 # Now we create the view, giving it the model as its data source
 view = FoodPlannerView(model)
 # Finally, tell the view to render, creating all the html files we want.
-view.render(_BUILD_TARGET)
+view.build(BUILD_TARGET)

@@ -23,10 +23,10 @@ class FoodPlannerView(object):
             os.path.join(buildPath, "PackList.html"), 
             self.generate_pack_list()
         )
-        self.generate_final_document(
-            os.path.join(buildPath, "CookList.html"), 
-            self.generate_cook_list()
-        )
+        #self.generate_final_document(
+            #os.path.join(buildPath, "CookList.html"), 
+            #self.generate_cook_list()
+        #)
 
     def generate_buy_list(self):
         template = env.get_template('BuyList.html')
