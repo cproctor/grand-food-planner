@@ -36,26 +36,6 @@ class FoodPlannerModel(object):
         self.menuItems = self.generate_menu_items()
         self.purchases = self.generate_purchases()
 
-    def x_get_buy_list(self):
-        "Generate the data for a buy list"
-
-        stores = []
-        summedMenuItems = self.menu_item_totals()
-
-        for eachStore in self.store_names():
-            ingredientsFromStore = [i for i in summedMenuItems if i['buyStore'] == eachStore]
-            for storeItem in ingredientsFromStore:
-                storeItem['quantityRequired'] = storeItem['quantity']
-                storeItem['quantityPurchased'] = self.get_quantity_purchased(
-                        storeItem['name'], storeItem['unit']) 
-                storeItem['quantityStillNeeded'] = storeItem['quantityRequired'] - storeItem['quantityPurchased']
-            stores.append({
-                'name': eachStore,
-                'ingredients': ingredientsFromStore
-            })
-
-        return {"stores": stores}
-
     def get_buy_list(self):
         "Generate the data for a buy list"
         records = []
@@ -80,7 +60,8 @@ class FoodPlannerModel(object):
                     'unit': record['unit'],
                     'quantityRequired': required,
                     'quantityPurchased': purchased,
-                    'quantityStillNeeded': required - purchased
+                    'quantityStillNeeded': required - purchased,
+                    'notes': '; '.join([i for i in self.get_buy_notes(record['name']) if i])
                 })
             ingredientsFromStore = sorted(ingredientsFromStore, key=lambda i: i['name'])
             
@@ -549,5 +530,21 @@ class FoodPlannerModel(object):
             if ingredient['name'] == name:
                 return ingredient['buyStore']
 
-
-
+    def get_buy_notes(self, name):
+        ingredient = self.get_ingredient(name)
+        if not ingredient:
+            raise ValueError("No ingredient named %s" % name)
+        buyNotes = []
+        buyNotes.append(ingredient['notes'])
+        for menuItem in self.menuItems:
+            if menuItem['name'] == name and menuItem['buyingNotes']:
+                label = ' '.join([i for i in ['Menu', menuItem.get('day', ''),menuItem.get('meal', '')] if i])
+                buyNotes.append('[%s] %s' % (label, menuItem['buyingNotes']))
+        for purchase in self.purchases:
+            if purchase['name'] == name:
+                label = ' '.join([i for i in ['Purchase', purchase.get('day', ''), purchase.get('meal', '')] if i])
+                buyNotes.append("[%s] %s bought on %s" % (label, purchase['description'], purchase['shoppingTrip']))
+                if purchase['notes']:
+                    buyNotes.append("[%s] %s" % (label, purchase['notes']))
+        return buyNotes
+                
