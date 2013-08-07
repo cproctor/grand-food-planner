@@ -65,7 +65,7 @@ class FoodPlannerModel(object):
                     'quantityRequired': required,
                     'quantityPurchased': purchased,
                     'quantityStillNeeded': required - purchased,
-                    'notes': '; '.join([i for i in self.get_buy_notes(record['name']) if i])
+                    'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
                 })
             ingredientsFromStore = sorted(ingredientsFromStore, key=lambda i: i['name'])
             
@@ -91,6 +91,48 @@ class FoodPlannerModel(object):
             })
         return {"containers": sorted(containers, key=lambda i: i['name']), "time": NOW}
 
+    def get_cook_list(self):
+        cookList = []
+        mealNames = {
+            '1B': 'Breakfast',
+            '2L': 'Lunch',
+            '3D': 'Dinner'
+        }
+        for meal in self.meals():
+            ingredients = self.ingredients_for(meal['day'], meal['meal'])
+            for ingredient in ingredients:
+                ingredient['notes'] = '; '.join(self.get_notes(ingredient['name']))
+                ingredient['container'] = self.get_storage_container(ingredient)
+            def compareIngredients(a, b):
+                if a['container'] != b['container']:
+                    return 1 if a['container'] > b['container'] else -1
+                elif a['name'] != b['name']:
+                    return 1 if a['name'] > b['name'] else -1
+                else:
+                    return 0
+            ingredients = sorted(ingredients, compareIngredients) 
+            cookList.append({
+                'day': meal['day'],
+                'name': mealNames[meal['meal']],
+                'ingredients': ingredients
+            })
+        return {'meals': cookList, 'time': NOW}
+
+    def meals(self):
+        mealList = []
+        for item in self.menuItems:
+            itemMeal = {
+                'day': item['day'],
+                'meal': item['meal']
+            }
+            if not itemMeal in mealList and itemMeal['day'] and itemMeal['meal']:
+                mealList.append(itemMeal)
+        return sorted(mealList, key=lambda m: int(m['day']) * 100 + int(m['meal'][0]))
+
+    def ingredients_for(self, day, meal):
+        ingredients = [i for i in self.menuItems if i['day'] == day and i['meal'] == meal]
+        return sorted(ingredients, key=lambda i: i['name'])
+            
     # Do all the work required to get a valid list of ingredients. 
     # If we're in strict mode, then kill the program if there are errors.
     def generate_ingredients(self):
@@ -537,29 +579,48 @@ class FoodPlannerModel(object):
             if ingredient['name'] == name:
                 return ingredient['buyStore']
 
-    def get_buy_notes(self, name):
-        ingredient = self.get_ingredient(name)
-        if not ingredient:
-            raise ValueError("No ingredient named %s" % name)
-        buyNotes = []
-        buyNotes.append(ingredient['notes'])
-        for menuItem in self.menuItems:
-            if menuItem['name'] == name and menuItem['buyingNotes']:
-                label = ' '.join([i for i in ['Menu', menuItem.get('day', ''),menuItem.get('meal', '')] if i])
-                buyNotes.append('[%s] %s' % (label, menuItem['buyingNotes']))
-        buyNotes += self.get_purchase_notes(name)
-        return filter(lambda i: i, buyNotes)
+    def get_ingredient_notes(self, name):
+        return filter(None, [self.get_ingredient(name)['notes']])
 
-    def get_purchase_notes(self, name):
-        notes = []
+    def get_menu_buy_notes(self, name, label=True):
+        return self._get_menu_notes(name, 'buyingNotes', label=label)
+
+    def get_menu_cook_notes(self, name, label=True):
+        return self._get_menu_notes(name, 'cookingNotes', label=label)
+
+    def get_purchase_notes(self, name, label=True):
+        purchaseNotes = []
         for purchase in self.purchases:
             if purchase['name'] == name:
-                label = ' '.join([i for i in ['Purchase', purchase.get('day', ''), purchase.get('meal', '')] if i])
-                notes.append("[%s] %s bought on %s" % (label, purchase['description'], purchase['shoppingTrip']))
+                labelString = self._note_label('Purchase', purchase, label)
                 if purchase['notes']:
-                    notes.append("[%s] %s" % (label, purchase['notes']))
-        return notes
+                    purchaseNotes.append(labelString + purchase['notes'])
+                if purchase['description']:
+                    purchaseNotes.append(
+                        labelString + 
+                        ("%(description)s was bought on %(shoppingTrip)s" %
+                        purchase)
+                    )
+        return purchaseNotes
 
+    def get_notes(self, name, ingredient=True, menu_buy=True, menu_cook=True, 
+            purchase=True, label=True):
+        return ([] + 
+            (self.get_ingredient_notes(name) if ingredient else []) + 
+            (self.get_menu_buy_notes(name, label=label) if menu_buy else []) + 
+            (self.get_menu_cook_notes(name, label=label) if menu_cook else []) + 
+            (self.get_purchase_notes(name, label=label) if purchase else []))
+
+    def _get_menu_notes(self, name, prop, label=True):
+        return [self._note_label('Menu', i, label) + i[prop] for i in 
+                self.menuItems if i['name'] == name and i[prop]]
+
+    def _note_label(self, prefix, item, labelWanted):
+        if labelWanted:
+            labelList = [prefix, item.get('day', ''), item.get('meal', '')]
+            return '[%s] ' % ' '.join(filter(None, labelList))
+        else:
+            return ''
 
     def get_storage_container(self, menuItem):
         storage = menuItem['storage']
@@ -587,3 +648,6 @@ class FoodPlannerModel(object):
             container = 'cooler'
 
         return 'bag %s in %s %s' % (bagNumber, container, containerNumber)
+
+    def get_time(self):
+        return {'time': NOW}
