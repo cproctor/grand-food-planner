@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}	
+
+<h1> Grand Canyon Cook List </h1>
+<p>Generated {{time}}</p>
+
+    {% for meal in meals %}
+    <h3>Day {{meal.day}} {{meal.name}}</h3>
+    <table>
+        {% for ingredient in meal.ingredients %}
+            <tr>
+                <td>{{ingredient.quantity}} {{ingredient.unit}} {{ingredient.name}}</td>
+                <td>{{ingredient.container}}</td>
+                <td>{{ingredient.notes}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+    {% endfor %}
+
+{% endblock %}
+
+	
+
+
+
