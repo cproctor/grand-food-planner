@@ -12,7 +12,8 @@ STORAGE_LOCATIONS = [
     'cooler (frozen)',
     'drybox',
     'condiments',
-    'snacks'
+    'snacks',
+    'kitchen'
 ]
 
 NOW = datetime.now().strftime('%A %B %d, %Y at %I:%M %p')
@@ -72,6 +73,52 @@ class FoodPlannerModel(object):
             })
 
         return {"stores": stores, "time": NOW}
+
+
+    def get_final_buy_list(self):
+        records = []
+        # Get a list of all unique combinations of name and unit
+        for record in self.purchases + self.menuItems:
+            if not any([r for r in records if r['name'] == record['name'] and r['unit'] == record['unit']]):
+                name = record.get('name', record.get('item'))
+                required = self.get_quantity_required(record['name'], record['unit'])
+                purchased = self.get_quantity_purchased(record['name'], record['unit'])
+                
+                records.append({
+                    'name': name,
+                    'unit': record['unit'],
+                    'store': self.get_ingredient_store(record['name']),
+                    'quantityRequired': required,
+                    'quantityPurchased': purchased,
+                    'quantityStillNeeded': required - purchased,
+                    'notes': '; '.join(self.get_notes(name, menu_cook=False))
+                })
+        return {"records": records, "time": NOW}
+
+        stores = []
+        for store in self.store_names():
+            storeRecords = [r for r in records if r['store'] == store]
+            ingredientsFromStore = []
+            for record in storeRecords:
+                required = self.get_quantity_required(record['name'], record['unit'])
+                purchased = self.get_quantity_purchased(record['name'], record['unit'])
+                ingredientsFromStore.append({
+                    'name': record['name'],
+                    'unit': record['unit'],
+                    'quantityRequired': required,
+                    'quantityPurchased': purchased,
+                    'quantityStillNeeded': required - purchased,
+                    'notes': '; '.join(self.get_notes(record['name'], menu_cook=False))
+                })
+            ingredientsFromStore = sorted(ingredientsFromStore, key=lambda i: i['name'])
+            
+            stores.append({
+                'name': store,
+                'ingredients': ingredientsFromStore
+            })
+
+        return {"stores": stores, "time": NOW}
+        
 
             
     def get_pack_list(self):
@@ -664,6 +711,9 @@ class FoodPlannerModel(object):
 
         if not storage in STORAGE_LOCATIONS:
             return 'NO STORAGE LOCATION'
+
+        if storage == 'kitchen':
+            return "Kitchen Box"
 
         if storage == 'condiments':
             return 'Condiments Box'

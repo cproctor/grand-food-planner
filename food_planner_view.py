@@ -20,6 +20,10 @@ class FoodPlannerView(object):
             self.generate_buy_list()
         )
         self.generate_final_document(
+            os.path.join(buildPath, "BuyListFinal.html"), 
+            self.generate_final_buy_list()
+        )
+        self.generate_final_document(
             os.path.join(buildPath, "PackList.html"), 
             self.generate_pack_list()
         )
@@ -35,6 +39,11 @@ class FoodPlannerView(object):
     def generate_buy_list(self):
         template = env.get_template('BuyList.html')
         data = self.model.get_buy_list()
+        return template.render(data)
+
+    def generate_final_buy_list(self):
+        template = env.get_template('BuyListFinal.html')
+        data = self.model.get_final_buy_list()
         return template.render(data)
 
     def generate_pack_list(self):

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}	
+    <h1>Grand Canyon Final Buy List</h1>
+    <p> This is a list of all ingredients 
+    <p>Generated {{time}}</p>
+    <table>
+        <tr>
+            <th>Item</th>
+            <th>Buy Store</th>
+            <th>Still needed</th>
+            <th>Required</th>
+            <th>Purchased</th>
+            <th>Notes</th>
+        </tr>
+	{% for record in records %}
+	    <tr>
+	        <td> {{record.name}} </td>
+	        <td> {{record.store}} </td>
+            <td> <strong>
+                {% if record.quantityStillNeeded > 0 %}
+                    {{record.quantityStillNeeded}} {{record.unit}} 
+                {% endif %}  
+            </strong></td>
+	        <td> {{record.quantityRequired}} {{record.unit}}</td>
+            <td> {{record.quantityPurchased}} {{record.unit}}</td>
+	        <td> {{record.notes}} <td>
+	    </tr>
+	{% endfor %}
+    </table>
+	
+
+
+{% endblock %}
