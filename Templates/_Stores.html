@@ -10,7 +10,11 @@
     {% for eachIngredient in store.ingredients %}
 	<tr>
 	    <td> {{eachIngredient.name}} </td>
-        <td> <strong>{{eachIngredient.quantityStillNeeded}} {{eachIngredient.unit}} </strong></td>
+        <td> <strong>
+            {% if eachIngredient.quantityStillNeeded > 0 %}
+                {{eachIngredient.quantityStillNeeded}} {{eachIngredient.unit}} 
+            {% endif %}  
+        </strong></td>
 	    <td> {{eachIngredient.quantityRequired}} {{eachIngredient.unit}}</td>
         <td> {{eachIngredient.quantityPurchased}} {{eachIngredient.unit}}</td>
 	    <td> {{eachIngredient.notes}} <td>
